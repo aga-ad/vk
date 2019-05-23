@@ -8,10 +8,14 @@ using namespace std;
 const size_t OUT = (size_t)-1;
 typedef double num;
 
+// Содержит индексы двух соседних кластеров
 struct Neighbour {
     size_t l, r;
 };
 
+// l, r - индексы двух дочерних кластеров
+// p - индекс родителя
+// ll, rr - индекс соседних кластеров
 struct Cluster {
     size_t l, r, p, ll, rr;
     num center;
@@ -23,6 +27,9 @@ struct Cluster {
 };
 
 vector<Cluster> slc(const vector<num>& points) {
+    // Cоздается вектор кластеров, состоящих из одного элемента
+    // ids[k] - k-порядковая статистика, pos[k] - позиция в отсортированном списке кластеров;
+    // ids, pos используются для эффективного поиска соседей для каждого единичного кластера
     vector<size_t> ids(points.size());
     for (size_t i = 0; i < ids.size(); i++) {
         ids[i] = i;
@@ -32,7 +39,6 @@ vector<Cluster> slc(const vector<num>& points) {
     for (size_t i = 0; i < ids.size(); i++) {
         pos[ids[i]] = i;
     }
-
     vector<Cluster> clusters;
     clusters.reserve(2 * points.size() - 1);
     for (size_t i = 0; i < points.size(); i++) {
@@ -50,21 +56,21 @@ vector<Cluster> slc(const vector<num>& points) {
         }
         clusters.push_back(Cluster(i, ll, rr, points));
     }
-
+    // Создается куча с парами соседних кластеров
+    //
+    // Используя кучу, достаем пару ближайших кластеров,
+    // если каждый из них не был объединен, то объединяем их в новый кластер,
+    // добавляем две новые пары соседних кластеров
     vector<Neighbour> neighbours;
     neighbours.reserve(ids.size() - 1);
     for (size_t i = 0; i + 1 < ids.size(); i++) {
         neighbours.push_back(Neighbour{ids[i], ids[i + 1]});
     }
-
     auto comp = [&clusters](const Neighbour& l, const Neighbour& r) {
         return clusters[l.r].center - clusters[l.l].center > clusters[r.r].center - clusters[r.l].center;
     };
-
     make_heap(neighbours.begin(), neighbours.end(), comp);
-
     while (neighbours.size() > 0) {
-        //cout << clusters.size() << " " << (long long)neighbours.size() << endl;
         Neighbour cur = neighbours.front();
         pop_heap(neighbours.begin(), neighbours.end(), comp);
         neighbours.pop_back();
@@ -91,14 +97,14 @@ vector<Cluster> slc(const vector<num>& points) {
 
 int main() {
     vector<num> vec;
-    for (size_t i = 0; i < (1 << 24); i++) {
+    for (size_t i = 0; i < (1 << 20); i++) {
         vec.push_back(i);
     }
     auto start = std::chrono::high_resolution_clock::now();
     auto clusters = slc(vec);
     auto end = std::chrono::high_resolution_clock::now();
     auto time_taken_1 = end - start;
-    std::cout << "Forward transform took "
+    std::cout << "slc took "
     << std::chrono::duration_cast<std::chrono::milliseconds>(time_taken_1).count() << " ms\n";
     /*for (size_t i = 0; i < clusters.size(); i++) {
         cout << i << ":  " << clusters[i].l << " " << clusters[i].r << "  " << clusters[i].center << endl;
